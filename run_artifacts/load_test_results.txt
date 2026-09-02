@@ -1,0 +1,6 @@
+  agents  workers      ops   time(s)      ops/s   p50(ms)   p99(ms)
+     100        8     1200     0.663     1809.4      0.12     0.877
+    1000        8     1200     0.466     2577.0     0.113     0.264
+    5000        8     1200     0.563     2130.8     0.106      0.41
+
+Interpretation: ops/sec should stay roughly flat as `agents` grows (each CAS write is O(1) - an indexed UPDATE), but p99 latency should climb with `workers` because BEGIN IMMEDIATE serializes all writers on the single SQLite file. That serialization - not the agent count - is the actual bottleneck, and is what needs to change first at real scale. See ADR.md 'Scale analysis'.

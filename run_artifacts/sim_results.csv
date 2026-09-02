@@ -1,0 +1,9 @@
+scenario,mode,provider,agents,elapsed_sec,calls_initiated,calls_connected,calls_completed,calls_failed,events_ignored_dup_or_stale,final_utilization_pct,safety_decisions,safety_reduce_or_fallback
+A,progressive,mixed,20,8.0,85,62,53,15,0,85.0,48,5
+A,predictive,mixed,20,8.0,82,65,57,7,0,90.0,48,18
+B,progressive,mixed,20,8.0,72,51,49,5,0,90.0,48,5
+B,predictive,mixed,20,8.0,67,55,48,6,0,65.0,48,4
+C,progressive,mixed,20,8.0,75,63,57,1,0,85.0,48,0
+C,predictive,mixed,20,8.0,66,61,53,1,0,60.0,48,5
+D,progressive,mixed,20,8.0,83,71,62,4,0,85.0,48,0
+D,predictive,mixed,20,8.0,71,61,50,9,0,60.0,48,9

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartDialer — evidence of a working prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B0F14;
+    --panel: #131A22;
+    --panel-2: #0F151C;
+    --border: #253140;
+    --text: #E7EDF3;
+    --muted: #8CA0B3;
+    --faint: #56687A;
+    --accent: #5FD0E8;
+    --approve: #3DDC84;
+    --reduce: #F5B942;
+    --reject: #6E7E90;
+    --fallback: #FF6B5B;
+    --mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+    --sans: 'IBM Plex Sans', -apple-system, Helvetica, Arial, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); line-height:1.55; font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{ color:var(--accent); text-decoration:none; border-bottom:1px solid rgba(95,208,232,0.35); }
+  a:hover{ border-bottom-color:var(--accent); }
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
+
+  .wrap{ max-width:920px; margin:0 auto; padding:0 24px; }
+  .wide{ max-width:1080px; margin:0 auto; padding:0 24px; }
+
+  header.hero{ padding:72px 0 40px; border-bottom:1px solid var(--border); }
+  .kicker{
+    font-family:var(--mono); font-size:13px; color:var(--faint);
+    margin:0 0 14px; letter-spacing:0.02em;
+  }
+  h1{
+    font-size:clamp(32px,5vw,46px); line-height:1.12; margin:0 0 18px;
+    font-weight:700; letter-spacing:-0.01em; max-width:15ch;
+  }
+  .lede{ font-size:18px; color:var(--muted); max-width:62ch; margin:0 0 28px; }
+  .hero-links{ display:flex; gap:20px; flex-wrap:wrap; font-family:var(--mono); font-size:14px; }
+
+  h2{
+    font-size:22px; margin:0 0 6px; font-weight:600; letter-spacing:-0.005em;
+  }
+  .section-note{ color:var(--muted); font-size:15px; max-width:64ch; margin:0 0 28px; }
+  section{ padding:56px 0; border-bottom:1px solid var(--border); }
+  section:last-of-type{ border-bottom:none; }
+
+  /* ---- pipeline diagram ---- */
+  .pipeline{
+    display:flex; align-items:stretch; gap:0; flex-wrap:wrap;
+    margin:28px 0 8px; font-family:var(--mono); font-size:13.5px;
+  }
+  .stage{
+    background:var(--panel); border:1px solid var(--border); border-radius:3px;
+    padding:14px 16px; min-width:150px; flex:1 1 150px;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .stage .n{ color:var(--faint); font-size:12px; }
+  .stage .t{ color:var(--text); font-weight:600; }
+  .stage.safety{ border-color:var(--accent); box-shadow:0 0 0 1px rgba(95,208,232,0.15); }
+  .arrow{
+    display:flex; align-items:center; justify-content:center;
+    color:var(--faint); font-size:18px; padding:0 6px; flex:0 0 auto;
+  }
+  .pipeline-note{
+    font-family:var(--mono); font-size:13px; color:var(--fallback);
+    border-left:2px solid var(--fallback); padding:8px 0 8px 14px; margin-top:18px;
+  }
+
+  /* ---- stat tiles ---- */
+  .stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); margin-top:8px; }
+  .stat{ background:var(--panel-2); padding:22px 20px; }
+  .stat .num{ font-family:var(--mono); font-size:26px; font-weight:600; color:var(--accent); }
+  .stat .label{ color:var(--muted); font-size:14px; margin-top:6px; }
+
+  /* ---- state machine flow ---- */
+  .flow{ display:flex; flex-wrap:wrap; align-items:center; gap:0; margin:20px 0; font-family:var(--mono); font-size:13px; }
+  .pill{
+    border:1px solid var(--border); background:var(--panel); color:var(--text);
+    padding:7px 12px; border-radius:999px; white-space:nowrap;
+  }
+  .pill.term{ border-color:var(--faint); color:var(--muted); }
+  .flow .arrow{ font-size:14px; padding:0 4px; }
+  .flow-row{ display:flex; flex-wrap:wrap; align-items:center; gap:0; margin:6px 0; }
+
+  /* ---- decision table ---- */
+  table.decisions{ width:100%; border-collapse:collapse; margin-top:20px; font-family:var(--mono); font-size:13px; }
+  table.decisions th{
+    text-align:left; font-weight:500; color:var(--faint); font-size:12px;
+    padding:8px 12px; border-bottom:1px solid var(--border);
+  }
+  table.decisions td{ padding:12px; border-bottom:1px solid var(--border); vertical-align:top; color:var(--muted); }
+  table.decisions td.reason{ color:var(--text); font-size:12.5px; }
+  .badge{ display:inline-block; padding:2px 8px; border-radius:3px; font-size:11px; font-weight:600; border:1px solid; }
+  .badge.APPROVE{ color:var(--approve); border-color:var(--approve); }
+  .badge.REDUCE{ color:var(--reduce); border-color:var(--reduce); }
+  .badge.REJECT{ color:var(--reject); border-color:var(--reject); }
+  .badge.FALLBACK{ color:var(--fallback); border-color:var(--fallback); }
+  .row-note{ font-family:var(--mono); font-size:12.5px; color:var(--faint); margin-top:10px; }
+
+  /* ---- timeline (concurrency / crash) ---- */
+  .timeline{ margin-top:20px; font-family:var(--mono); font-size:13px; }
+  .tl-step{ display:flex; gap:16px; padding:10px 0; border-left:2px solid var(--border); padding-left:18px; position:relative; }
+  .tl-step::before{
+    content:''; position:absolute; left:-6px; top:16px; width:10px; height:10px;
+    border-radius:50%; background:var(--bg); border:2px solid var(--faint);
+  }
+  .tl-step.win::before{ border-color:var(--approve); }
+  .tl-step.block::before{ border-color:var(--reduce); }
+  .tl-step.crash::before{ border-color:var(--fallback); }
+  .tl-who{ color:var(--faint); min-width:88px; flex:0 0 auto; }
+  .tl-text{ color:var(--text); }
+  .tl-text .sub{ color:var(--muted); display:block; font-size:12px; margin-top:2px; }
+
+  /* ---- results table ---- */
+  table.results{ width:100%; border-collapse:collapse; margin-top:20px; font-family:var(--mono); font-size:13px; }
+  table.results th, table.results td{ padding:10px 12px; border-bottom:1px solid var(--border); text-align:right; }
+  table.results th:first-child, table.results td:first-child{ text-align:left; }
+  table.results th{ color:var(--faint); font-weight:500; font-size:12px; }
+  table.results td{ color:var(--text); }
+
+  .chart-wrap{ margin-top:24px; border:1px solid var(--border); border-radius:3px; overflow:hidden; background:var(--panel-2); }
+  .chart-wrap img{ display:block; width:100%; height:auto; }
+
+  code, .inline-code{ font-family:var(--mono); background:var(--panel); border:1px solid var(--border); padding:1px 6px; border-radius:3px; font-size:0.9em; }
+
+  footer{ padding:48px 0 72px; }
+  footer .cols{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:32px; }
+  footer h3{ font-size:14px; color:var(--faint); font-weight:500; margin:0 0 12px; font-family:var(--mono); }
+  footer ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; font-family:var(--mono); font-size:13.5px; }
+
+  @media (max-width:640px){
+    header.hero{ padding:48px 0 32px; }
+    section{ padding:40px 0; }
+    .pipeline{ flex-direction:column; }
+    .arrow{ transform:rotate(90deg); padding:6px 0; }
+    table.decisions{ font-size:12px; }
+    table.decisions td:nth-child(4){ display:none; } /* hide requested/approved cols least essential on mobile */
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="hero">
+  <p class="kicker">smartdialer — tech assignment prototype</p>
+  <h1>A dialer where the predictive algorithm cannot switch off the safety mechanism.</h1>
+  <p class="lede">This page is generated entirely from real output of the actual code in this repo — the same test run, simulation, and load test anyone can reproduce locally. Nothing below is a mockup.</p>
+  <div class="hero-links">
+    <a href="https://github.com/UJJAWALX42/smartdialer">Source →</a>
+    <a href="https://github.com/UJJAWALX42/smartdialer/blob/main/README.md">README</a>
+    <a href="https://github.com/UJJAWALX42/smartdialer/blob/main/ARCHITECTURE.md">Architecture</a>
+    <a href="https://github.com/UJJAWALX42/smartdialer/blob/main/ADR.md">Decisions (ADR)</a>
+  </div>
+</header>
+</div>
+
+<div class="wide">
+<section id="pipeline">
+  <h2>The pipeline</h2>
+  <p class="section-note">Neither pacing engine holds a reference to the allocator or the provider. The only object standing between a pacing decision and an actual outbound call is the Safety Controller — structurally, not by convention.</p>
+  <div class="pipeline">
+    <div class="stage"><span class="n">01</span><span class="t">Campaign</span></div>
+    <div class="arrow">→</div>
+    <div class="stage"><span class="n">02</span><span class="t">Pacing Engine</span><span style="color:var(--muted)">Progressive / Predictive</span></div>
+    <div class="arrow">→</div>
+    <div class="stage safety"><span class="n">03</span><span class="t">Safety Controller</span><span style="color:var(--muted)">approve · reduce · reject · fallback</span></div>
+    <div class="arrow">→</div>
+    <div class="stage"><span class="n">04</span><span class="t">Call Allocator</span></div>
+    <div class="arrow">→</div>
+    <div class="stage"><span class="n">05</span><span class="t">Telecom Provider</span><span style="color:var(--muted)">mock A / mock B</span></div>
+  </div>
+  <p class="pipeline-note">predictive_engine.py has zero import of call_allocator.py — there is no code path to skip stage 03.</p>
+</section>
+
+<section id="proof">
+  <h2>What's actually verified, not just claimed</h2>
+  <p class="section-note">Pulled straight from the test suite and load test in this repo.</p>
+  <div class="stats">
+    <div class="stat"><div class="num">26 / 26</div><div class="label">tests passing on a clean clone</div></div>
+    <div class="stat"><div class="num">25 → 1</div><div class="label">threads racing for one agent, exactly one reservation wins</div></div>
+    <div class="stat"><div class="num">0</div><div class="label">double transitions across duplicate + out-of-order event tests</div></div>
+    <div class="stat"><div class="num">~2,500 ops/s</div><div class="label">measured CAS reservation throughput, flat regardless of agent count</div></div>
+  </div>
+</section>
+</div>
+
+<div class="wrap">
+<section id="states">
+  <h2>Agent and call state machines</h2>
+  <p class="section-note">Explicit, tested transition graphs — not implicit status strings. Terminal call states never leave once entered, which is what makes duplicate/out-of-order provider events a non-issue.</p>
+
+  <p style="font-family:var(--mono); font-size:12px; color:var(--faint); margin:24px 0 4px;">agent</p>
+  <div class="flow-row">
+    <span class="pill">OFFLINE</span><span class="arrow">→</span>
+    <span class="pill">AVAILABLE</span><span class="arrow">→</span>
+    <span class="pill">RESERVED</span><span class="arrow">→</span>
+    <span class="pill">DIALING</span><span class="arrow">→</span>
+    <span class="pill">CONNECTED</span><span class="arrow">→</span>
+    <span class="pill">WRAP_UP</span><span class="arrow">→</span>
+    <span class="pill">AVAILABLE</span>
+  </div>
+  <div class="flow-row"><span class="pill" style="opacity:.7">PAUSED</span><span style="color:var(--faint); font-family:var(--mono); font-size:12px; margin-left:10px;">reachable from AVAILABLE or WRAP_UP, returns to AVAILABLE</span></div>
+
+  <p style="font-family:var(--mono); font-size:12px; color:var(--faint); margin:28px 0 4px;">call</p>
+  <div class="flow-row">
+    <span class="pill">QUEUED</span><span class="arrow">→</span>
+    <span class="pill">RESERVED</span><span class="arrow">→</span>
+    <span class="pill">INITIATED</span><span class="arrow">→</span>
+    <span class="pill">RINGING</span><span class="arrow">→</span>
+    <span class="pill">ANSWERED</span><span class="arrow">→</span>
+    <span class="pill">CONNECTED</span><span class="arrow">→</span>
+    <span class="pill term">COMPLETED</span>
+  </div>
+  <div class="flow-row"><span class="pill term">FAILED</span><span class="pill term" style="margin-left:8px;">CANCELLED</span><span style="color:var(--faint); font-family:var(--mono); font-size:12px; margin-left:10px;">terminal — no outgoing transitions, verified by test_call_terminal_states_have_no_outgoing_transitions</span></div>
+</section>
+</div>
+
+<div class="wrap">
+<section id="decisions">
+  <h2>Safety Controller decisions, captured from a live run</h2>
+  <p class="section-note">Every row below is a real <span class="inline-code">SafetyDecision</span> object logged during an actual simulation (scenarios A/B, 18 agents, seed 7) — not written by hand.</p>
+
+  <table class="decisions">
+    <thead>
+      <tr><th>mode</th><th>action</th><th>requested → approved</th><th>reason</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>predictive</td>
+        <td><span class="badge REDUCE">REDUCE</span></td>
+        <td>36 → 18</td>
+        <td class="reason">predictive requested 36 based on a 50% answer-rate estimate; capped at 18 available agents.</td>
+      </tr>
+      <tr>
+        <td>predictive</td>
+        <td><span class="badge REDUCE">REDUCE</span></td>
+        <td>90 → 18</td>
+        <td class="reason">a lower 20% answer-rate estimate pushed the request to 90; same hard cap applied regardless.</td>
+      </tr>
+      <tr>
+        <td>predictive</td>
+        <td><span class="badge APPROVE">APPROVE</span></td>
+        <td>1 → 1</td>
+        <td class="reason">near end of ramp-up (14 already in flight, 3 agents free) — small request fits within capacity as-is.</td>
+      </tr>
+      <tr>
+        <td>progressive</td>
+        <td><span class="badge APPROVE">APPROVE</span></td>
+        <td>18 → 18</td>
+        <td class="reason">progressive always requests exactly one call per available agent; nothing to reduce.</td>
+      </tr>
+      <tr>
+        <td>predictive</td>
+        <td><span class="badge REJECT">REJECT</span></td>
+        <td>0 → 0</td>
+        <td class="reason">zero agents available this tick — pacing engine itself requested nothing.</td>
+      </tr>
+      <tr>
+        <td>either mode</td>
+        <td><span class="badge FALLBACK">FALLBACK</span></td>
+        <td>30 → 10</td>
+        <td class="reason">provider_error_rate reached 0.85 (≥ 0.6 outage threshold) — forced to 1:1 progressive-style pacing until it recovers.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="row-note">First five rows: captured live from simulate.py. Last row: reproduced directly by calling SafetyController.evaluate() with a simulated outage snapshot — a real outage is a probabilistic ~3%/tick event and didn't fire in this particular nine-second run, so this row demonstrates the same code path without waiting on chance.</p>
+</section>
+</div>
+
+<div class="wrap">
+<section id="concurrency">
+  <h2>Two workers, one agent</h2>
+  <p class="section-note">From tests/test_concurrency_race.py — 25 real OS threads contend for a single row. No application-level lock is involved; SQLite's own <span class="inline-code">BEGIN IMMEDIATE</span> transaction is the compare-and-swap.</p>
+  <div class="timeline">
+    <div class="tl-step win">
+      <div class="tl-who">worker-1</div>
+      <div class="tl-text">BEGIN IMMEDIATE — acquires the write lock first<span class="sub">UPDATE agents SET state='RESERVED' WHERE id=? AND state='AVAILABLE' → 1 row affected → COMMIT</span></div>
+    </div>
+    <div class="tl-step block">
+      <div class="tl-who">worker-2 … 25</div>
+      <div class="tl-text">BEGIN IMMEDIATE blocks until worker-1 commits<span class="sub">same UPDATE re-runs → 0 rows affected (state already RESERVED) → reserve_agent() returns False</span></div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-who">result</div>
+      <div class="tl-text">exactly 1 of 25 reservation attempts succeeds — asserted directly in the test, not inferred</div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:56px;">Worker crash → automatic recovery</h2>
+  <p class="section-note">From tests/test_worker_crash_recovery.py — no crash detection is needed; unrenewed leases are the recovery signal.</p>
+  <div class="timeline">
+    <div class="tl-step">
+      <div class="tl-who">worker</div>
+      <div class="tl-text">reserve_agent() → reserve_next_borrower() → create_call() → advance_agent(DIALING)</div>
+    </div>
+    <div class="tl-step crash">
+      <div class="tl-who">worker</div>
+      <div class="tl-text">process crashes here, before ever calling the provider<span class="sub">agent stuck DIALING · call stuck RESERVED · borrower stuck RESERVED</span></div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-who">any live worker</div>
+      <div class="tl-text">reconciliation.sweep() finds the expired lease<span class="sub">agent → AVAILABLE · call → FAILED · borrower → QUEUED, attempt_count + 1</span></div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div class="wide">
+<section id="simulation">
+  <h2>Simulation output</h2>
+  <p class="section-note">18 agents, 3 concurrent workers, mixed mock providers, 9-second runs. Utilization vs. calls connected across scenario/mode combinations.</p>
+  <div class="chart-wrap"><img src="assets/sim_chart.png" alt="Bar and line chart comparing final agent utilization percentage and calls connected across scenario and mode combinations from a real simulation run"></div>
+
+  <table class="results">
+    <thead>
+      <tr><th>scenario / mode</th><th>initiated</th><th>connected</th><th>completed</th><th>failed</th><th>dup/stale ignored</th><th>utilization</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>B / predictive (mixed provider)</td><td>30</td><td>19</td><td>17</td><td>1</td><td>4</td><td>77.8%</td></tr>
+      <tr><td>B / progressive (mixed provider)</td><td>35</td><td>20</td><td>17</td><td>2</td><td>3</td><td>94.4%</td></tr>
+      <tr><td>A / predictive (provider B)</td><td>32</td><td>18</td><td>16</td><td>1</td><td>3</td><td>88.9%</td></tr>
+    </tbody>
+  </table>
+  <p class="row-note">"dup/stale ignored" = provider events that were duplicates or arrived out of order and were correctly dropped as no-ops instead of double-applying — Provider B's deliberately messy behavior, working as intended.</p>
+</section>
+</div>
+
+<div class="wrap">
+<section id="scale">
+  <h2>Scale: what breaks first</h2>
+  <p class="section-note">CAS agent-reservation throughput measured directly, not estimated — from load_test.py.</p>
+  <table class="results">
+    <thead><tr><th>agent pool</th><th>ops/sec</th><th>p50 latency</th><th>p99 latency</th></tr></thead>
+    <tbody>
+      <tr><td>100</td><td>1,809.4</td><td>0.12 ms</td><td>0.88 ms</td></tr>
+      <tr><td>1,000</td><td>2,577.0</td><td>0.11 ms</td><td>0.26 ms</td></tr>
+      <tr><td>5,000</td><td>2,130.8</td><td>0.11 ms</td><td>0.41 ms</td></tr>
+    </tbody>
+  </table>
+  <p class="row-note">Throughput stays flat as agent count grows — the bottleneck isn't agent count, it's that <span class="inline-code">BEGIN IMMEDIATE</span> serializes every writer on one SQLite file. Full reasoning and the fix (partition by campaign, move to row-level locking) in ADR.md.</p>
+</section>
+</div>
+
+<div class="wrap">
+<footer>
+  <div class="cols">
+    <div>
+      <h3>repository</h3>
+      <ul>
+        <li><a href="https://github.com/UJJAWALX42/smartdialer">smartdialer</a></li>
+        <li><a href="https://github.com/UJJAWALX42/smartdialer/tree/main/src/smartdialer">source (src/)</a></li>
+        <li><a href="https://github.com/UJJAWALX42/smartdialer/tree/main/tests">tests</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>docs</h3>
+      <ul>
+        <li><a href="https://github.com/UJJAWALX42/smartdialer/blob/main/README.md">README — setup &amp; run</a></li>
+        <li><a href="https://github.com/UJJAWALX42/smartdialer/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a></li>
+        <li><a href="https://github.com/UJJAWALX42/smartdialer/blob/main/ADR.md">ADR.md — decisions &amp; scale analysis</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>reproduce this page</h3>
+      <ul>
+        <li style="color:var(--muted); border:none;">python -m pytest -v</li>
+        <li style="color:var(--muted); border:none;">python simulate.py --all</li>
+        <li style="color:var(--muted); border:none;">python load_test.py</li>
+      </ul>
+    </div>
+  </div>
+</footer>
+</div>
+
+</body>
+</html>

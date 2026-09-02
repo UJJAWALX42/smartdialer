@@ -5,4 +5,8 @@ __pycache__/
 .venv/
 venv/
 run_artifacts/*.db
+run_artifacts/*.db-shm
+run_artifacts/*.db-wal
 *.db
+*.db-shm
+*.db-wal

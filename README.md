@@ -6,6 +6,13 @@ architectural rule: the predictive pacing algorithm can *request* calls,
 but only the **Safety Controller** can authorize them, and it cannot be
 bypassed.
 
+**[View the results page →](https://ujjawalx42.github.io/smartdialer/)**
+— pipeline diagram, state machines, real captured Safety Controller
+decisions, simulation output, and load-test numbers, generated entirely
+from this repo's own output. It's a static summary, not a hosted
+version of the tool: this is a CLI prototype, run locally per the setup
+below.
+
 ```
 Campaign -> Pacing Engine (Progressive | Predictive) -> Safety Controller -> Call Allocator -> Telecom Provider
 ```
